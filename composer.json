@@ -1,0 +1,21 @@
+{
+    "name": "yireo/magento2-swoole-api",
+    "version": "0.0.1",
+    "description": "N/A",
+    "type": "magento2-module",
+    "require": {
+        "magento/framework": "*",
+        "ext-swoole": "*"
+    },
+    "license": [
+        "OSL-3.0"
+    ],
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "Yireo\\SwooleApi\\": ""
+        }
+    }
+}
