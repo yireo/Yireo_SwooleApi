@@ -21,7 +21,6 @@ use Swoole\Http\Request as SwooleRequest;
 use Swoole\Http\Response as SwooleResponse;
 use Swoole\Http\Server as SwooleServer;
 use Throwable;
-use Yireo\CoursewareConnector\DataProvider\CoursewareDataProvider;
 
 class AppServer
 {
@@ -52,8 +51,6 @@ class AppServer
         ]);
 
         $this->initializeApplication($bootstrap);
-        // @todo: Move the following to a DI construct
-        $bootstrap->getObjectManager()->get(CoursewareDataProvider::class)->getCourses();
         $frontController = $bootstrap->getObjectManager()->get(FrontControllerInterface::class);
 
         $http->on(
