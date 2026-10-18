@@ -58,7 +58,7 @@ class AppServer
             function (SwooleRequest $request, SwooleResponse $response) use ($bootstrap, $frontController) {
                 foreach ($request->header as $headerName => $headerValue) {
                     $headerName = strtoupper(str_replace('-', '_', $headerName));
-                    $_SERVER['HTTP_'.$headerName] = $headerValue;
+                    $_SERVER['HTTP_'.$headerName] = $headerValue; // phpcs:ignore Magento2.Security.Superglobal
                 }
 
                 $json = $request->getContent();
@@ -125,6 +125,7 @@ class AppServer
         return $httpRequest;
     }
 
+    // phpcs:disable Magento2.Security.Superglobal
     private function initializePhpGlobals(SwooleRequest $request, SwooleResponse $response)
     {
         $_SERVER['HTTP_HOST'] = $request->header['host'];
@@ -150,6 +151,7 @@ class AppServer
 
         $GLOBALS['HTTP_RAW_POST_DATA'] = $request->getContent();
     }
+    // phpcs:enable Magento2.Security.Superglobal
 
     private function initializeApplication(Bootstrap $bootstrap)
     {
