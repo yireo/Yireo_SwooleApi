@@ -4,11 +4,15 @@
     "description": "N/A",
     "type": "magento2-module",
     "require": {
-        "magento/framework": "*",
+        "magento/framework": "^103.0",
+        "laminas/laminas-http": "^2.15",
+        "ext-json": "*",
         "ext-swoole": "*",
         "php": ">=8.2 <8.6"
     },
     "require-dev": {
+        "guzzlehttp/guzzle": "^7.5",
+        "phpunit/phpunit": "^9.5 || ^10.5",
         "swoole/ide-helper": "^6.0"
     },
     "license": [
