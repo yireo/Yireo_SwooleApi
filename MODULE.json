@@ -2,5 +2,6 @@
     "module_name": "Yireo_SwooleApi",
     "composer_name": "yireo/magento2-swoole-api",
     "sequence": [],
-    "phpcs_severity": "9"
+    "phpcs_severity": "9",
+    "phpstan_level": "3"
 }
