@@ -62,7 +62,8 @@ class AppServer
                 }
 
                 $json = $request->getContent();
-                if (false === json_validate($json)) {
+                json_decode($json);
+                if (json_last_error() !== JSON_ERROR_NONE) {
                     $this->log('Invalid JSON: '.$json);
                     $response->status(500);
                     $response->end('Invalid JSON request');
