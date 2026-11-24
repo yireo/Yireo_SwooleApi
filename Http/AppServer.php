@@ -26,6 +26,8 @@ class AppServer
 {
     private ServerGlobals $serverGlobals;
 
+    private RequestLogger $logger;
+
     public function __construct(
         private DirectoryList $directory,
         private StateResetter $stateResetter,
@@ -34,10 +36,14 @@ class AppServer
 
     public function run(Bootstrap $bootstrap)
     {
+        $config = new ServerConfig(getenv()); // phpcs:ignore Magento2.Functions.DiscouragedFunction
+        $logFile = $this->directory->getPath('log').'/swoole.log';
+        $this->logger = new RequestLogger($logFile, $config->isDebug());
+
         $host = '0.0.0.0';
         $port = 4000;
 
-        $this->log('Starting server on '.$host.' port '.$port);
+        $this->logger->log('Starting server on '.$host.' port '.$port);
         $http = new SwooleServer($host, $port, SWOOLE_BASE, SWOOLE_SOCK_TCP);
         $http->set([
             //'daemonize' => 1,
@@ -50,7 +56,7 @@ class AppServer
             'http_compression' => false,
             'tcp_fastopen' => true,
             'log_level' => SWOOLE_LOG_ERROR,
-            'log_file' => $this->directory->getPath('log').'/swoole.log',
+            'log_file' => $logFile,
         ]);
 
         $this->serverGlobals = new ServerGlobals($_SERVER); // phpcs:ignore Magento2.Security.Superglobal
@@ -60,21 +66,23 @@ class AppServer
         $http->on(
             "request",
             function (SwooleRequest $request, SwooleResponse $response) use ($bootstrap, $frontController) {
-                $json = $request->getContent();
+                $startTime = microtime(true);
+                $json = (string)$request->getContent();
                 json_decode($json);
                 if (json_last_error() !== JSON_ERROR_NONE) {
-                    $this->log('Invalid JSON: '.$json);
                     $response->status(500);
                     $response->end('Invalid JSON request');
+                    $this->logger->logRequest($json, 500, microtime(true) - $startTime);
 
                     return;
                 }
 
-                $this->log('Responding to request '.$request->getContent());
+                $status = 500;
                 try {
-                    $this->handleRequest($bootstrap, $frontController, $request, $response);
+                    $status = $this->handleRequest($bootstrap, $frontController, $request, $response);
                 } finally {
                     $this->stateResetter->reset();
+                    $this->logger->logRequest($json, $status, microtime(true) - $startTime);
                 }
             }
         );
@@ -87,7 +95,7 @@ class AppServer
         FrontControllerInterface $frontController,
         SwooleRequest $request,
         SwooleResponse $response
-    ): void {
+    ): int {
         $this->initializePhpGlobals($request);
         $magentoRequest = $this->initializeRequest($bootstrap, $request);
 
@@ -98,7 +106,7 @@ class AppServer
             $response->status(500);
             $response->end($contents);
 
-            return;
+            return 500;
         }
 
         /** @var Response $magentoResponse */
@@ -106,13 +114,13 @@ class AppServer
             foreach ($magentoResponse->getHeaders() as $header) {
                 $response->setHeader($header->getFieldName(), $header->getFieldValue());
             }
-        } else {
-            $this->log('No headers');
         }
 
         $response->status($magentoResponse->getStatusCode());
         $response->write($magentoResponse->getBody());
         $response->end();
+
+        return (int)$magentoResponse->getStatusCode();
     }
 
     private function initializeRequest(Bootstrap $bootstrap, SwooleRequest $request): Request
@@ -165,11 +173,5 @@ class AppServer
         $objectManager->configure($configLoader->load($areaCode));
 
         $objectManager->configure([Fields::class => ['shared' => false]]);
-    }
-
-    private function log(string $message)
-    {
-        $logFile = $this->directory->getRoot().'/var/log/swoole.log';
-        file_put_contents($logFile, $message."\n", FILE_APPEND);
     }
 }
