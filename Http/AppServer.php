@@ -145,7 +145,9 @@ class AppServer
         $httpRequest->setPathInfo($newRequest->getPathInfo());
 
         $headers = new Headers;
-        foreach ($request->header ?? [] as $fieldName => $fieldValue) {
+        $remoteAddress = (string)($request->server['remote_addr'] ?? '');
+        $requestHeaders = $this->serverGlobals->filterHeaders($request->header ?? [], $remoteAddress);
+        foreach ($requestHeaders as $fieldName => $fieldValue) {
             try {
                 $headers->addHeader(new GenericHeader((string)$fieldName, (string)$fieldValue));
             } catch (InvalidArgumentException) {

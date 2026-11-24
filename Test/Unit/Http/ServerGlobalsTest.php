@@ -74,4 +74,36 @@ class ServerGlobalsTest extends TestCase
         $untrusted = $serverGlobals->build($headers, ['remote_addr' => '203.0.113.7']);
         $this->assertArrayNotHasKey('HTTPS', $untrusted);
     }
+
+    public function testForwardingHeadersAreDroppedFromUntrustedClients(): void
+    {
+        $serverGlobals = new ServerGlobals([], ['127.0.0.1']);
+        $headers = [
+            'host' => 'example.com',
+            'x-forwarded-for' => '1.2.3.4',
+            'X-Forwarded-Proto' => 'https',
+            'client-ip' => '1.2.3.4',
+            'x-real-ip' => '1.2.3.4',
+            'forwarded' => 'for=1.2.3.4',
+        ];
+
+        $this->assertSame(['host' => 'example.com'], $serverGlobals->filterHeaders($headers, '203.0.113.7'));
+
+        $result = $serverGlobals->build($headers, ['remote_addr' => '203.0.113.7']);
+        $this->assertArrayNotHasKey('HTTP_X_FORWARDED_FOR', $result);
+        $this->assertArrayNotHasKey('HTTP_X_FORWARDED_PROTO', $result);
+        $this->assertArrayNotHasKey('HTTP_CLIENT_IP', $result);
+        $this->assertArrayNotHasKey('HTTPS', $result);
+    }
+
+    public function testForwardingHeadersAreKeptFromTrustedProxies(): void
+    {
+        $serverGlobals = new ServerGlobals([], ['127.0.0.1']);
+        $headers = ['x-forwarded-for' => '1.2.3.4'];
+
+        $this->assertSame($headers, $serverGlobals->filterHeaders($headers, '127.0.0.1'));
+
+        $result = $serverGlobals->build($headers, ['remote_addr' => '127.0.0.1']);
+        $this->assertSame('1.2.3.4', $result['HTTP_X_FORWARDED_FOR']);
+    }
 }

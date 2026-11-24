@@ -17,6 +17,18 @@ class ServerGlobals
         'CONTENT_LENGTH',
     ];
 
+    private const FORWARDING_HEADERS = [
+        'forwarded',
+        'client-ip',
+        'x-client-ip',
+        'x-real-ip',
+        'x-cluster-client-ip',
+        'true-client-ip',
+        'cf-connecting-ip',
+        'ssl-offloaded',
+        'front-end-https',
+    ];
+
     private readonly array $baseServer;
 
     public function __construct(
@@ -30,9 +42,23 @@ class ServerGlobals
         );
     }
 
+    public function filterHeaders(array $headers, string $remoteAddress): array
+    {
+        if ($this->isTrustedProxy($remoteAddress)) {
+            return $headers;
+        }
+
+        return array_filter(
+            $headers,
+            fn ($name) => !$this->isForwardingHeader(strtolower((string)$name)),
+            ARRAY_FILTER_USE_KEY
+        );
+    }
+
     public function build(array $headers, array $server): array
     {
         $result = $this->baseServer;
+        $headers = $this->filterHeaders($headers, (string)($server['remote_addr'] ?? ''));
 
         foreach ($headers as $name => $value) {
             $name = strtoupper(str_replace('-', '_', (string)$name));
@@ -69,11 +95,21 @@ class ServerGlobals
 
     private function isSecure(array $headers, string $remoteAddress): bool
     {
-        if (!in_array($remoteAddress, $this->trustedProxies, true)) {
+        if (!$this->isTrustedProxy($remoteAddress)) {
             return false;
         }
 
         return strtolower((string)($headers['x-forwarded-proto'] ?? '')) === 'https';
+    }
+
+    private function isTrustedProxy(string $remoteAddress): bool
+    {
+        return in_array($remoteAddress, $this->trustedProxies, true);
+    }
+
+    private function isForwardingHeader(string $name): bool
+    {
+        return str_starts_with($name, 'x-forwarded-') || in_array($name, self::FORWARDING_HEADERS, true);
     }
 
     private function isRequestKey(string $key): bool
