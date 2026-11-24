@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Yireo\SwooleApi\Http;
 
+use Throwable;
+
 class RequestLogger
 {
     private const OPERATION_NAME_PATTERN = '/^[A-Za-z_][A-Za-z0-9_]{0,99}$/';
@@ -18,8 +20,12 @@ class RequestLogger
     public function log(string $message): void
     {
         $message = str_replace(["\r", "\n"], ' ', $message);
-        // phpcs:ignore Magento2.Functions.DiscouragedFunction
-        file_put_contents($this->logFile, date('c').' '.$message."\n", FILE_APPEND | LOCK_EX);
+        try {
+            // phpcs:ignore Magento2.Functions.DiscouragedFunction
+            file_put_contents($this->logFile, date('c').' '.$message."\n", FILE_APPEND | LOCK_EX);
+        } catch (Throwable) {
+            return;
+        }
     }
 
     public function logRequest(string $body, int $status, float $duration): void

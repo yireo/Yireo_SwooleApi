@@ -50,6 +50,21 @@ class RequestLoggerTest extends TestCase
         $this->assertSame(1, substr_count($contents, "\n"));
     }
 
+    public function testFailingLogWriteDoesNotThrow(): void
+    {
+        set_error_handler(function (int $errno, string $errstr): bool {
+            throw new \ErrorException($errstr, 0, $errno);
+        });
+
+        try {
+            (new RequestLogger('/nonexistent-dir/swoole.log'))->log('message');
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->addToAssertionCount(1);
+    }
+
     #[DataProvider('getOperationNameProvider')]
     public function testGetOperationName(string $body, string $expected): void
     {

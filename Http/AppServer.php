@@ -63,7 +63,7 @@ class AppServer
 
         $http->on(
             "request",
-            function (SwooleRequest $request, SwooleResponse $response) use ($bootstrap, $frontController) {
+            function (SwooleRequest $request, SwooleResponse $response) use ($http, $bootstrap, $frontController) {
                 $startTime = microtime(true);
                 $json = (string)$request->getContent();
                 $status = 500;
@@ -80,10 +80,10 @@ class AppServer
                     $status = $this->handleRequest($bootstrap, $frontController, $request, $response);
                 } catch (Throwable $error) {
                     $status = 500;
-                    $this->logger->log($this->getErrorDetails($error));
                     $this->sendError($response, $status, 'Internal server error');
+                    $this->logger->log($this->getErrorDetails($error));
                 } finally {
-                    $this->stateResetter->reset();
+                    $this->resetState($http);
                     $this->logger->logRequest($json, $status, microtime(true) - $startTime);
                 }
             }
@@ -111,6 +111,16 @@ class AppServer
         $response->end((string)$magentoResponse->getBody());
 
         return (int)$magentoResponse->getStatusCode();
+    }
+
+    private function resetState(SwooleServer $http): void
+    {
+        try {
+            $this->stateResetter->reset();
+        } catch (Throwable $error) {
+            $this->logger->log('Stopping worker after failed state reset: '.$this->getErrorDetails($error));
+            $http->stop();
+        }
     }
 
     private function sendError(SwooleResponse $response, int $status, string $message): void
