@@ -4,6 +4,11 @@ declare(strict_types=1);
 use Magento\Framework\App\Bootstrap;
 use Yireo\SwooleApi\Http\AppServer;
 
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    return;
+}
+
 require_once __DIR__ . '/app/bootstrap.php'; // phpcs:ignore Magento2.Security.IncludeFile
 
 $bootstrap = Bootstrap::create(__DIR__, $_SERVER); // phpcs:ignore Magento2.Security.Superglobal
