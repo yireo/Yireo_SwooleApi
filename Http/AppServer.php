@@ -40,8 +40,8 @@ class AppServer
         $logFile = $this->directory->getPath('log').'/swoole.log';
         $this->logger = new RequestLogger($logFile, $config->isDebug());
 
-        $host = '0.0.0.0';
-        $port = 4000;
+        $host = $config->getHost();
+        $port = $config->getPort();
 
         $this->logger->log('Starting server on '.$host.' port '.$port);
         $http = new SwooleServer($host, $port, SWOOLE_BASE, SWOOLE_SOCK_TCP);
@@ -59,7 +59,8 @@ class AppServer
             'log_file' => $logFile,
         ]);
 
-        $this->serverGlobals = new ServerGlobals($_SERVER); // phpcs:ignore Magento2.Security.Superglobal
+        // phpcs:ignore Magento2.Security.Superglobal
+        $this->serverGlobals = new ServerGlobals($_SERVER, $config->getTrustedProxies());
         $this->initializeApplication($bootstrap);
         $frontController = $bootstrap->getObjectManager()->get(FrontControllerInterface::class);
 

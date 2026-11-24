@@ -23,6 +23,19 @@ cp vendor/yireo/magento2-swoole-api/appserver.php .
 php ./appserver.php
 ```
 
+### Configuration
+The server is configured with environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SWOOLE_API_HOST` | `127.0.0.1` | IP address to listen on |
+| `SWOOLE_API_PORT` | `4000` | Port to listen on |
+| `SWOOLE_API_TRUSTED_PROXIES` | `127.0.0.1,::1` | Comma-separated IPs of reverse proxies whose `X-Forwarded-Proto` header is trusted |
+| `SWOOLE_API_DEBUG` | `0` | Log metadata (operation name, size, status, duration) of every request to `var/log/swoole.log` |
+
+The server speaks plain HTTP. Do not expose it publicly: run it behind a reverse proxy (like Nginx) that terminates TLS
+and applies rate limiting.
+
 ### Benchmarks
 Original Magento GraphQL request (150ms-500ms):
 ```bash
