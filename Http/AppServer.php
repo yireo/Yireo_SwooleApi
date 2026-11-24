@@ -26,6 +26,7 @@ class AppServer
 {
     public function __construct(
         private DirectoryList $directory,
+        private StateResetter $stateResetter,
     ) {
     }
 
@@ -72,35 +73,48 @@ class AppServer
                 }
 
                 $this->log('Responding to request '.$request->getContent());
-                $this->initializePhpGlobals($request, $response);
-                $magentoRequest = $this->initializeRequest($bootstrap, $request);
-
                 try {
-                    $magentoResponse = $frontController->dispatch($magentoRequest);
-                } catch (Throwable $error) {
-                    $contents = json_encode(['errors' => [$error->getMessage()]]);
-                    $response->status(500);
-                    $response->end($contents);
-
-                    return;
+                    $this->handleRequest($bootstrap, $frontController, $request, $response);
+                } finally {
+                    $this->stateResetter->reset();
                 }
-
-                /** @var Response $magentoResponse */
-                if ($magentoResponse->getHeaders()) {
-                    foreach ($magentoResponse->getHeaders() as $header) {
-                        $response->setHeader($header->getFieldName(), $header->getFieldValue());
-                    }
-                } else {
-                    $this->log('No headers');
-                }
-
-                $response->status($magentoResponse->getStatusCode());
-                $response->write($magentoResponse->getBody());
-                $response->end();
             }
         );
 
         $http->start();
+    }
+
+    private function handleRequest(
+        Bootstrap $bootstrap,
+        FrontControllerInterface $frontController,
+        SwooleRequest $request,
+        SwooleResponse $response
+    ): void {
+        $this->initializePhpGlobals($request, $response);
+        $magentoRequest = $this->initializeRequest($bootstrap, $request);
+
+        try {
+            $magentoResponse = $frontController->dispatch($magentoRequest);
+        } catch (Throwable $error) {
+            $contents = json_encode(['errors' => [$error->getMessage()]]);
+            $response->status(500);
+            $response->end($contents);
+
+            return;
+        }
+
+        /** @var Response $magentoResponse */
+        if ($magentoResponse->getHeaders()) {
+            foreach ($magentoResponse->getHeaders() as $header) {
+                $response->setHeader($header->getFieldName(), $header->getFieldValue());
+            }
+        } else {
+            $this->log('No headers');
+        }
+
+        $response->status($magentoResponse->getStatusCode());
+        $response->write($magentoResponse->getBody());
+        $response->end();
     }
 
     private function initializeRequest(Bootstrap $bootstrap, SwooleRequest $request): Request
