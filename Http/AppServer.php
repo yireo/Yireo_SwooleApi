@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Yireo\SwooleApi\Http;
 
+use Laminas\Http\Header\Exception\InvalidArgumentException;
 use Laminas\Http\Header\GenericHeader;
 use Laminas\Http\Headers;
 use Magento\Framework\App\Bootstrap;
@@ -69,18 +70,22 @@ class AppServer
             function (SwooleRequest $request, SwooleResponse $response) use ($bootstrap, $frontController) {
                 $startTime = microtime(true);
                 $json = (string)$request->getContent();
-                json_decode($json);
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    $response->status(500);
-                    $response->end('Invalid JSON request');
-                    $this->logger->logRequest($json, 500, microtime(true) - $startTime);
-
-                    return;
-                }
-
                 $status = 500;
+
                 try {
+                    json_decode($json);
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        $status = 400;
+                        $this->sendError($response, $status, 'Invalid JSON request');
+
+                        return;
+                    }
+
                     $status = $this->handleRequest($bootstrap, $frontController, $request, $response);
+                } catch (Throwable $error) {
+                    $status = 500;
+                    $this->logger->log($this->getErrorDetails($error));
+                    $this->sendError($response, $status, 'Internal server error');
                 } finally {
                     $this->stateResetter->reset();
                     $this->logger->logRequest($json, $status, microtime(true) - $startTime);
@@ -100,21 +105,10 @@ class AppServer
         $this->initializePhpGlobals($request);
         $magentoRequest = $this->initializeRequest($bootstrap, $request);
 
-        try {
-            $magentoResponse = $frontController->dispatch($magentoRequest);
-        } catch (Throwable $error) {
-            $contents = json_encode(['errors' => [$error->getMessage()]]);
-            $response->status(500);
-            $response->end($contents);
-
-            return 500;
-        }
-
         /** @var Response $magentoResponse */
-        if ($magentoResponse->getHeaders()) {
-            foreach ($magentoResponse->getHeaders() as $header) {
-                $response->setHeader($header->getFieldName(), $header->getFieldValue());
-            }
+        $magentoResponse = $frontController->dispatch($magentoRequest);
+        foreach ($magentoResponse->getHeaders() as $header) {
+            $response->setHeader($header->getFieldName(), $header->getFieldValue());
         }
 
         $response->status($magentoResponse->getStatusCode());
@@ -122,6 +116,28 @@ class AppServer
         $response->end();
 
         return (int)$magentoResponse->getStatusCode();
+    }
+
+    private function sendError(SwooleResponse $response, int $status, string $message): void
+    {
+        if (!$response->isWritable()) {
+            return;
+        }
+
+        $response->status($status);
+        $response->header('Content-Type', 'application/json');
+        $response->end((string)json_encode(['errors' => [['message' => $message]]]));
+    }
+
+    private function getErrorDetails(Throwable $error): string
+    {
+        return sprintf(
+            'Error: %s: %s in %s:%d',
+            $error::class,
+            $error->getMessage(),
+            $error->getFile(),
+            $error->getLine()
+        );
     }
 
     private function initializeRequest(Bootstrap $bootstrap, SwooleRequest $request): Request
@@ -134,14 +150,18 @@ class AppServer
         $httpRequest->setPathInfo($newRequest->getPathInfo());
 
         $headers = new Headers;
-        foreach ($request->header as $fieldName => $fieldValue) {
-            $headers->addHeader(new GenericHeader($fieldName, $fieldValue));
+        foreach ($request->header ?? [] as $fieldName => $fieldValue) {
+            try {
+                $headers->addHeader(new GenericHeader((string)$fieldName, (string)$fieldValue));
+            } catch (InvalidArgumentException) {
+                continue;
+            }
         }
 
         $httpRequest->setHeaders($headers);
         $httpRequest->setMethod($newRequest->getMethod());
         $httpRequest->setParams($newRequest->getParams());
-        $httpRequest->setContent($request->getContent());
+        $httpRequest->setContent((string)$request->getContent());
         $httpRequest->setPost($newRequest->getPost());
 
         return $httpRequest;
