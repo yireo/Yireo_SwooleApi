@@ -31,6 +31,16 @@ class ServerConfig
         return $this->getInt('SWOOLE_API_PORT', 4000, 1, 65535);
     }
 
+    public function getMaxRequest(): int
+    {
+        return $this->getInt('SWOOLE_API_MAX_REQUEST', 500, 1, PHP_INT_MAX);
+    }
+
+    public function getPackageMaxLength(): int
+    {
+        return $this->getInt('SWOOLE_API_PACKAGE_MAX_LENGTH', 1024 * 1024, 1024, 64 * 1024 * 1024);
+    }
+
     public function getTrustedProxies(): array
     {
         $value = $this->getValue('SWOOLE_API_TRUSTED_PROXIES');

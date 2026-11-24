@@ -51,4 +51,25 @@ class ServerConfigTest extends TestCase
         $config = new ServerConfig(['SWOOLE_API_TRUSTED_PROXIES' => '10.0.0.1, bogus ,10.0.0.2']);
         $this->assertSame(['10.0.0.1', '10.0.0.2'], $config->getTrustedProxies());
     }
+
+    public function testLimitsHaveSafeDefaults(): void
+    {
+        $config = new ServerConfig([]);
+        $this->assertSame(500, $config->getMaxRequest());
+        $this->assertSame(1048576, $config->getPackageMaxLength());
+    }
+
+    public function testLimitsCanBeConfigured(): void
+    {
+        $config = new ServerConfig(['SWOOLE_API_MAX_REQUEST' => '100', 'SWOOLE_API_PACKAGE_MAX_LENGTH' => '2097152']);
+        $this->assertSame(100, $config->getMaxRequest());
+        $this->assertSame(2097152, $config->getPackageMaxLength());
+    }
+
+    public function testInvalidLimitsFallBackToDefaults(): void
+    {
+        $config = new ServerConfig(['SWOOLE_API_MAX_REQUEST' => '0', 'SWOOLE_API_PACKAGE_MAX_LENGTH' => '999999999999']);
+        $this->assertSame(500, $config->getMaxRequest());
+        $this->assertSame(1048576, $config->getPackageMaxLength());
+    }
 }

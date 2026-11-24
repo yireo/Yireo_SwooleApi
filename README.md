@@ -30,6 +30,8 @@ The server is configured with environment variables:
 |----------|---------|-------------|
 | `SWOOLE_API_HOST` | `127.0.0.1` | IP address to listen on |
 | `SWOOLE_API_PORT` | `4000` | Port to listen on |
+| `SWOOLE_API_MAX_REQUEST` | `500` | Number of requests after which a worker is restarted |
+| `SWOOLE_API_PACKAGE_MAX_LENGTH` | `1048576` | Maximum request size in bytes (1 KB to 64 MB) |
 | `SWOOLE_API_TRUSTED_PROXIES` | `127.0.0.1,::1` | Comma-separated IPs of reverse proxies whose `X-Forwarded-Proto` header is trusted |
 | `SWOOLE_API_DEBUG` | `0` | Log metadata (operation name, size, status, duration) of every request to `var/log/swoole.log` |
 
