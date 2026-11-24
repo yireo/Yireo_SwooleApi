@@ -47,6 +47,7 @@ class AppServer
         $this->logger->log('Starting server on '.$host.' port '.$port);
         $http = new SwooleServer($host, $port, SWOOLE_BASE, SWOOLE_SOCK_TCP);
         $http->set([
+            'enable_coroutine' => false,
             'max_request' => $config->getMaxRequest(),
             'package_max_length' => $config->getPackageMaxLength(),
             'http_compression' => false,
