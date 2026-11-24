@@ -107,8 +107,7 @@ class AppServer
         }
 
         $response->status($magentoResponse->getStatusCode());
-        $response->write($magentoResponse->getBody());
-        $response->end();
+        $response->end((string)$magentoResponse->getBody());
 
         return (int)$magentoResponse->getStatusCode();
     }
