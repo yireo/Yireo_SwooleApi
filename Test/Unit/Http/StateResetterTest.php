@@ -9,6 +9,7 @@ use Magento\Framework\ObjectManager\ConfigInterface;
 use Magento\Framework\ObjectManager\FactoryInterface;
 use Magento\Framework\ObjectManager\ObjectManager;
 use Magento\Framework\ObjectManager\Resetter\WeakMapSorter;
+use Magento\Store\Api\StoreRepositoryInterface;
 use Magento\Webapi\Model\Authorization\TokenUserContext;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -54,6 +55,15 @@ class StateResetterTest extends TestCase
         $response->setHeader('X-Magento-Tags', 'customer_2');
         $stateResetter->reset();
         $this->assertFalse($response->getHeader('X-Magento-Tags'));
+    }
+
+    public function testCachedStoresAreCleaned(): void
+    {
+        $storeRepository = $this->createMock(StoreRepositoryInterface::class);
+        $storeRepository->expects($this->once())->method('clean');
+
+        $objectManager = $this->createObjectManager([StoreRepositoryInterface::class => $storeRepository]);
+        (new StateResetter($objectManager))->reset();
     }
 
     private function createObjectManager(array $sharedInstances): ObjectManager

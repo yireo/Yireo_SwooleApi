@@ -8,6 +8,7 @@ use Closure;
 use Magento\Framework\ObjectManager\Resetter\ResetterFactory;
 use Magento\Framework\ObjectManager\Resetter\ResetterInterface;
 use Magento\Framework\ObjectManagerInterface;
+use Magento\Store\Api\StoreRepositoryInterface;
 
 class StateResetter
 {
@@ -22,9 +23,15 @@ class StateResetter
     {
         $resetter = $this->getResetter();
         foreach ($this->getSharedInstances() as $instance) {
-            if (is_object($instance) && $instance !== $this->objectManager && $instance !== $this) {
-                $resetter->addInstance($instance);
+            if (!is_object($instance) || $instance === $this->objectManager || $instance === $this) {
+                continue;
             }
+
+            if ($instance instanceof StoreRepositoryInterface) {
+                $instance->clean();
+            }
+
+            $resetter->addInstance($instance);
         }
 
         $resetter->_resetState();
