@@ -24,6 +24,8 @@ use Throwable;
 
 class AppServer
 {
+    private ServerGlobals $serverGlobals;
+
     public function __construct(
         private DirectoryList $directory,
         private StateResetter $stateResetter,
@@ -51,17 +53,13 @@ class AppServer
             'log_file' => $this->directory->getPath('log').'/swoole.log',
         ]);
 
+        $this->serverGlobals = new ServerGlobals($_SERVER); // phpcs:ignore Magento2.Security.Superglobal
         $this->initializeApplication($bootstrap);
         $frontController = $bootstrap->getObjectManager()->get(FrontControllerInterface::class);
 
         $http->on(
             "request",
             function (SwooleRequest $request, SwooleResponse $response) use ($bootstrap, $frontController) {
-                foreach ($request->header as $headerName => $headerValue) {
-                    $headerName = strtoupper(str_replace('-', '_', $headerName));
-                    $_SERVER['HTTP_'.$headerName] = $headerValue; // phpcs:ignore Magento2.Security.Superglobal
-                }
-
                 $json = $request->getContent();
                 json_decode($json);
                 if (json_last_error() !== JSON_ERROR_NONE) {
@@ -90,7 +88,7 @@ class AppServer
         SwooleRequest $request,
         SwooleResponse $response
     ): void {
-        $this->initializePhpGlobals($request, $response);
+        $this->initializePhpGlobals($request);
         $magentoRequest = $this->initializeRequest($bootstrap, $request);
 
         try {
@@ -141,28 +139,13 @@ class AppServer
     }
 
     // phpcs:disable Magento2.Security.Superglobal
-    private function initializePhpGlobals(SwooleRequest $request, SwooleResponse $response)
+    private function initializePhpGlobals(SwooleRequest $request): void
     {
-        $_SERVER['HTTP_HOST'] = $request->header['host'];
-        $_SERVER['SERVER_PORT'] = 80;
-        $_SERVER['REQUEST_URI'] = $request->server['request_uri'];
-        $_SERVER['REQUEST_METHOD'] = $request->server['request_method'];
-
-        if (!empty($request->header['content-type'])) {
-            $_SERVER['REDIRECT_HTTP_CONTENT_TYPE'] = $request->header['content-type'];
-        } else {
-            unset($_SERVER['REDIRECT_HTTP_CONTENT_TYPE']);
-        }
-
-        if (!empty($request->header['x-requested-with'])) {
-            $_SERVER['HTTP_X_REQUESTED_WITH'] = $request->header['x-requested-with'];
-        } else {
-            unset($_SERVER['HTTP_X_REQUESTED_WITH']);
-        }
-
-        $_GET = $request->get;
-        $_POST = $request->post;
-        $_COOKIE = $request->cookie;
+        $_SERVER = $this->serverGlobals->build($request->header ?? [], $request->server ?? []);
+        $_GET = $request->get ?? [];
+        $_POST = $request->post ?? [];
+        $_COOKIE = $request->cookie ?? [];
+        $_FILES = [];
 
         $GLOBALS['HTTP_RAW_POST_DATA'] = $request->getContent();
     }
