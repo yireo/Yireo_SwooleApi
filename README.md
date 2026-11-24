@@ -3,7 +3,7 @@
 <!-- badges.specs.start -->
 <div class="github-specs-badges">
 
-![Magento version](https://img.shields.io/badge/Magento-2.4.6%20%7C%202.4.9-orange)
+![Magento version](https://img.shields.io/badge/Magento-2.4.7%20%7C%202.4.9-orange)
 ![PHP version](https://img.shields.io/badge/PHP-8.2%E2%80%938.5-777BB4)
 ![License](https://img.shields.io/badge/License-OSL--3.0-blue)
 ![Latest Version](https://img.shields.io/packagist/v/yireo/magento2-swoole-api)
@@ -18,7 +18,8 @@
 This was forked from [Swoolegento_Cli](https://github.com/swoolegento/magento2-module). PHP 8.3 has been added. Blackfire probing in the code has been removed. Upgrade commands to Symfony 6. Refactor main CLI command. Remove everything but support for GraphQL.
 
 ### Installation
-Make sure you have Swoole installed into PHP.
+Make sure you have Swoole installed into PHP. Magento 2.4.7 or higher is required, because the server relies on the
+Magento state resetter to isolate requests from each other.
 
 ```bash
 composer require yireo/magento2-swoole-api:@dev
