@@ -1,0 +1,45 @@
+schema_version: "1.6.0"
+id: YIREO-SWOOLE-API-2026-001
+published: "2026-11-27T00:00:00Z"
+modified: "2026-11-27T00:00:00Z"
+aliases: []
+summary: Customer identity, credentials and request headers leak between requests of different users
+details: >
+  The Swoole application server keeps Magento in memory and serves many requests with the same objects.
+  Before version 0.0.1, shared instances implementing ResetAfterRequestInterface (like TokenUserContext and
+  the HTTP response) and cached Store instances were never reset, request headers like Authorization were
+  added to $_SERVER but never removed, and HTTP callbacks ran in coroutines that could overwrite the shared
+  request and authentication state of a request still running. As a result, a request could be handled with
+  the customer identity, Authorization header or response headers of a previous or concurrent request of
+  another user. In addition, full GraphQL request bodies, including customer passwords sent to
+  generateCustomerToken, were written to var/log/swoole.log, forwarding headers of untrusted clients allowed
+  spoofing HTTPS and the client IP address, the server listened on 0.0.0.0 by default, appserver.php was
+  reachable over HTTP when copied into the Magento root, and exception details were returned to clients.
+  Version 0.0.1 resets object state after each request and retires the worker when this fails, rebuilds
+  the server superglobals per request, disables coroutines for request callbacks, only logs request metadata
+  when SWOOLE_API_DEBUG=1, only trusts forwarding headers from configured proxies, binds to 127.0.0.1 by
+  default, restricts appserver.php to the CLI and returns a generic error message. Version 0.0.1 requires
+  Magento 2.4.7 or higher.
+severity:
+  - type: CVSS_V3
+    score: "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N"
+affected:
+  - package:
+      ecosystem: Packagist
+      name: yireo/magento2-swoole-api
+    ranges:
+      - type: ECOSYSTEM
+        events:
+          - introduced: "0"
+          - fixed: "0.0.1"
+references:
+  - type: PACKAGE
+    url: https://github.com/yireo/Yireo_SwooleApi
+  - type: FIX
+    url: https://github.com/yireo/Yireo_SwooleApi/releases/tag/0.0.1
+database_specific:
+  cwe_ids:
+    - CWE-488
+    - CWE-532
+    - CWE-348
+    - CWE-209
