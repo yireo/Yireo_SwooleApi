@@ -18,9 +18,7 @@
         "phpunit/phpunit": "^9.5 || ^10.5",
         "swoole/ide-helper": "^6.0"
     },
-    "license": [
-        "OSL-3.0"
-    ],
+    "license": "OSL-3.0",
     "autoload": {
         "files": [
             "registration.php"
