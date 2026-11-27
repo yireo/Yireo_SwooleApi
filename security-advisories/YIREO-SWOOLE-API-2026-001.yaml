@@ -2,7 +2,8 @@ schema_version: "1.6.0"
 id: YIREO-SWOOLE-API-2026-001
 published: "2026-11-27T00:00:00Z"
 modified: "2026-11-27T00:00:00Z"
-aliases: []
+aliases:
+  - GHSA-q93c-w5x2-h5g9
 summary: Customer identity, credentials and request headers leak between requests of different users
 details: >
   The Swoole application server keeps Magento in memory and serves many requests with the same objects.
